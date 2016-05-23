@@ -97,6 +97,32 @@ def ssdp_discover(service, bind_ip, res):
     except socket.timeout:
       break
 
+def get_header():
+  print
+  print ' ---[=                         :: cli2dlna.py ::                         =]--- '
+  print ''
+  print ' [!] This is a PoC code. It does not support multiple UPnP renderers :('
+  print
+
+def return_help():
+  print ' [?] Examples, how to run:'
+  print ' ]$ ' + sys.argv[0] + ' -f /some/file'
+  print '     Assuming you have running web server on 80 port that shares your files.'
+  print '     Script will notify your UPnP renderer to get media from this server.'
+  print
+  print ' ]$ ' + sys.argv[0] + ' -u http://...'
+  print '     Script will notify your UPnP renderer to get media from this url.'
+  print ' ]$ ' + sys.argv[0] + ' -y ...'
+  print '     Script will call youtube-dl to process your request.'
+  print '     [!] - YOUTUBE_DL environment variable should be set'
+  print '     [!]   or default of /usr/local/bin/youtube-dl will be used'
+  print '     youtube-dl will be executed as subprocess with -g key to get http link.'
+  print '     Afterthat, this link will be sent to your UPnP renderer.'
+  print
+  print ' ---[=                           Have fun ;)                             =]--- '
+  print
+  sys.exit(1)
+
 
 xml_head = '<?xml version="1.0" encoding="utf-8" standalone="yes"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
 it = 'xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID>'
@@ -106,13 +132,22 @@ sth = '"urn:schemas-upnp-org:service:AVTransport'
 
 ytd = os.getenv('YOUTUBE_DL', '/usr/local/bin/youtube-dl')
 
+get_header()
+
+if len(sys.argv) < 2:
+  return_help()
+
 tvs = []
 ifaces, ips = all_interfaces(16)
 results = []
-print 'Dropping into SSDP discovery. Please wait'
+print ' [**] Dropping into SSDP discovery. Please wait'
 for ip in ips:
   ssdp_discover('urn:schemas-upnp-org:service:AVTransport:1', ip, results)
 results = uniq_array(results)
+
+if len(results) < 1:
+  print ' [:(] No UPnP answered. Try again'
+  sys.exit(1)
 
 for result in results:
   data = urllib2.urlopen(result).read()
@@ -134,24 +169,12 @@ for result in results:
     for url in out:
       payload = out.strip()
     if payload == '':
-      print 'youtube-dl could not provide us with url'
+      print ' [:(] youtube-dl could not provide us with url'
       sys.exit(1)
-    print 'caught this url: %s' % payload
+    print ' [:)] caught this url: %s' % payload
  
   if payload == '':
-    print 'This is PoC code. It does not support multiple UPnP renderers'
-    print 'Examples, how to run:'
-    print sys.argv[0] + ' -f /some/file'
-    print 'assuming you have running web server on 80 port that shares your files'
-    print 'script will notify UPnP renderer to get media from this server'
-    print sys.argv[0] + ' -u http://...'
-    print 'script will notify UPnP renderer to get media from this url'
-    print sys.argv[0] + ' -y ...'
-    print 'script will call youtube-dl for processing your request'
-    print 'YOUTUBE_DL environment variable should be set or default of /usr/local/bin/youtube-dl will be used'
-    print 'youtube-dl will be executed as subprocess with -g key to get http link'
-    print 'afterthat this link will be sent to your upnp renderer.'
-    sys.exit(1)
+    return_help()
 
   message_template = xml_head + '<u:SetAVTransportURI ' + it + '<CurrentURI>' + payload + \
   '</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
@@ -160,16 +183,18 @@ for result in results:
     req = urllib2.Request(addr, data=stop_message, headers=get_headers('Stop', len(stop_message)))
     urllib2.urlopen(req)
   except:
-    print 'Warning: Failed to send STOP message'
+    print ' [:|] Warning: Failed to send STOP message'
   try:
     req = urllib2.Request(addr, data=message_template, headers=get_headers('SetAVTransportURI', len(message_template)))
     urllib2.urlopen(req)
   except:
-    print 'Critical: Failed to send config message'
+    print ' [:(] Critical: Failed to send config message'
     sys.exit(1)
   try:
     req = urllib2.Request(addr, data=play_message, headers=get_headers('Play', len(play_message)))
     urllib2.urlopen(req)
   except:
-    print 'Critical: Failed to send PLAY message'
+    print ' [:(] Critical: Failed to send PLAY message'
     sys.exit(1)
+
+print ' [:)] Finished.'
