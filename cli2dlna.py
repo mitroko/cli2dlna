@@ -119,6 +119,12 @@ def return_help():
   print '     youtube-dl will be executed as subprocess with -g key to get http link.'
   print '     Afterthat, this link will be sent to your UPnP renderer.'
   print
+  print ' ]$ ' + sys.argv[0] + ' -c'
+  print '     Perform simple SSDP lookup for remote renderers'
+  print
+  print ' ]$ ' + sys.argv[0] + ' -h'
+  print '     Print this message :)'
+  print
   print ' ---[=                           Have fun ;)                             =]--- '
   print
   sys.exit(1)
@@ -137,6 +143,9 @@ get_header()
 if len(sys.argv) < 2:
   return_help()
 
+if (sys.argv[1] == '-h') or (sys.argv[1] == '--help'):
+  return_help()
+
 tvs = []
 ifaces, ips = all_interfaces(16)
 results = []
@@ -148,6 +157,10 @@ results = uniq_array(results)
 if len(results) < 1:
   print ' [:(] No UPnP answered. Try again'
   sys.exit(1)
+
+if sys.argv[1] == '-c':
+  print results
+  sys.exit(0)
 
 for result in results:
   data = urllib2.urlopen(result).read()
