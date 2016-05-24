@@ -4,8 +4,13 @@ cli2dlna
 cli2dlna: CLI to DLNA
 ---------------------
 
+<<<<<<< HEAD
 Command line tool to play media on remote renderers.  
 This is just a Proof-Of-Concept code and it has some limitations.  
+=======
+Command line tool to play media on remote renderers.
+This is just a Proof-Of-Concept code and it has some limitations.
+>>>>>>> 58c4a004924726704e4377bb3bb5b820302af37d
 Right now:
 - it can work with only one renderer.
 - limited number of functions (stop/start/pause/play)
