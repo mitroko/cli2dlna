@@ -53,9 +53,9 @@ HINTS
 -----
 To play multiple tracks use either ls or cat playlist file:  
     $ ls -1 /path/to/Videos/*.mp4 | while read line; do  
-      T=$(( $(ffprobe -i "${line}" -show_format -v quiet | sed -n 's/duration=//p;' | sed 's/\..*//g') + 5 ))  
-      /path/to/cli2dlna/cli2dlna.py -f "${line}"  
-      sleep ${T}  
-    done;
+        T=$(( $(ffprobe -i "${line}" -show_format -v quiet | sed -n 's/duration=//p;' | sed 's/\..*//g') + 5 ))  
+        /path/to/cli2dlna/cli2dlna.py -f "${line}"  
+        sleep ${T}  
+      done;
 
 To avoid extra SSDP lookups, don't forget to make /path/to/cli2dlna/ writable for cli2dlna.py.  
