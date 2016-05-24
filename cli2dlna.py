@@ -32,6 +32,17 @@ from StringIO import StringIO as fake_io # used for fake socket
 class SsdpFakeSocket(fake_io):
   def makefile(self, *args, **kw): return self
 
+def print_finish(happy):
+  print
+  if happy:
+    print ' [:)] Finished.'
+    print
+    sys.exit(0)
+  else:
+    print ' [:(] Finished.'
+    print
+    sys.exit(1)
+
 # https://gist.github.com/pklaus/289646 code
 def format_ip(addr):
   return str(ord(addr[0])) + '.' + \
@@ -97,6 +108,21 @@ def ssdp_discover(service, bind_ip, res):
     except socket.timeout:
       break
 
+def ssdp_lookup_main(results):
+  print ' [**] Dropping into SSDP discovery. Please wait'
+  ifaces, ips = all_interfaces(16)
+  for ip in ips:
+    ssdp_discover('urn:schemas-upnp-org:service:AVTransport:1', ip, results)
+  results = uniq_array(results)
+  
+  if len(results) < 1:
+    print ' [:(] No UPnP answered. Try again in one minute.'
+    print_finish(False)
+  
+  print ' [:)] Got non empty reply'
+  print ' ----------------------------------------------'
+  print
+
 def get_header():
   print
   print ' ---[=                         :: cli2dlna.py ::                         =]--- '
@@ -104,110 +130,163 @@ def get_header():
   print ' [!] This is a PoC code. It does not support multiple UPnP renderers :('
   print
 
+def get_renderer_from_config(rfile):
+  try:
+    r = open(rfile, 'r')
+    renderer = r.read()
+    r.close()
+  except:
+    renderer = ''
+  if not renderer == '':
+    print ' [:)] Using cached renderer: %s' % renderer
+  return renderer
+
+def cache_renderer(rfile, result):
+  try:
+    r = open(rfile, 'w')
+    r.write(result)
+    r.close()
+  except:
+    pass
+
+def get_renderer_control(result):
+  try:
+    data = urllib2.urlopen(result).read()
+    expr = re.compile(r'urn:upnp-org:serviceId:AVTransport.*<controlURL>(.*)</controlURL>', re.DOTALL)
+    regexresult = expr.findall(data)
+    o = urlparse.urlparse(result)
+  except:
+    print ' [:(] Unable to get/parse renderer control. Unsupported device.'
+    print_finish(False)
+  return str(o.hostname), o.port, str(regexresult[0])
+
+def renderer_cmd_multi(addr, action, message, is_critical):
+  try:
+    print ' [**] Sending ' + str(action) + ' message'
+    req = urllib2.Request(addr, data=message, headers=get_headers(action, len(message)))
+    urllib2.urlopen(req)
+  except:
+    if is_critical:
+      print ' [:(] Critical: Failed to send ' + str(action) + ' message'
+      print_finish(False)
+    else:
+      print ' [:|] Warning: Failed to send ' + str(action) + ' message'
+
 def return_help():
+  me = sys.argv[0]
   print ' [?] Examples, how to run:'
-  print ' ]$ ' + sys.argv[0] + ' -f /some/file'
+  print ' ]$ ' + me + ' -f /some/file'
   print '     Assuming you have running web server on 80 port that shares your files.'
   print '     Script will notify your UPnP renderer to get media from this server.'
   print
-  print ' ]$ ' + sys.argv[0] + ' -u http://...'
+  print ' ]$ ' + me + ' -u http://...'
   print '     Script will notify your UPnP renderer to get media from this url.'
-  print ' ]$ ' + sys.argv[0] + ' -y ...'
+  print ' ]$ ' + me + ' -y ...'
   print '     Script will call youtube-dl to process your request.'
   print '     [!] - YOUTUBE_DL environment variable should be set'
   print '     [!]   or default of /usr/local/bin/youtube-dl will be used'
   print '     youtube-dl will be executed as subprocess with -g key to get http link.'
   print '     Afterthat, this link will be sent to your UPnP renderer.'
   print
-  print ' ]$ ' + sys.argv[0] + ' -c'
+  print ' ]$ ' + me + ' -c'
   print '     Perform simple SSDP lookup for remote renderers'
   print
-  print ' ]$ ' + sys.argv[0] + ' -h'
+  print ' ]$ ' + me + ' -C'
+  print '     continue playing current media'
+  print
+  print ' ]$ ' + me + ' -P'
+  print '     pause current media'
+  print
+  print ' ]$ ' + me + ' -S'
+  print '     stop current media'
+  print
+  print ' ]$ ' + me + ' -h'
   print '     Print this message :)'
+  print
+  print ' [!] Script WILL try to save discovered UPnP renderer to renderer.cache to'
+  print '     prevent future SSDP lookups. Remove config to manage another renderer.'
   print
   print ' ---[=                           Have fun ;)                             =]--- '
   print
-  sys.exit(1)
+  sys.exit(0)
 
 
+#
+# ---[= Main
+#
+# :: static
 xml_head = '<?xml version="1.0" encoding="utf-8" standalone="yes"?><s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>'
 it = 'xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</InstanceID>'
 stop_message = xml_head + '<u:Stop ' + it + '</u:Stop></s:Body></s:Envelope>'
 play_message = xml_head + '<u:Play ' + it + '<Speed>1</Speed></u:Play></s:Body></s:Envelope>'
+pause_message = xml_head + '<u:Pause ' + it + '<Speed>1</Speed></u:Pause></s:Body></s:Envelope>'
+msg_tail = '</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
 sth = '"urn:schemas-upnp-org:service:AVTransport'
-
 ytd = os.getenv('YOUTUBE_DL', '/usr/local/bin/youtube-dl')
+rconf = os.path.dirname(sys.argv[0]) + '/renderer.cache'
 
+# :: greetings
 get_header()
-
 if len(sys.argv) < 2:
   return_help()
 
-if (sys.argv[1] == '-h') or (sys.argv[1] == '--help'):
+a1 = sys.argv[1]
+if (a1 == '-h') or (a1 == '--help'):
   return_help()
 
-tvs = []
-ifaces, ips = all_interfaces(16)
-results = []
-print ' [**] Dropping into SSDP discovery. Please wait'
-for ip in ips:
-  ssdp_discover('urn:schemas-upnp-org:service:AVTransport:1', ip, results)
-results = uniq_array(results)
+if a1 == '-c':
+  results = []
+  ssdp_lookup_main(results)
+  print ' ' + str(results)
+  print_finish(True)
 
-if len(results) < 1:
-  print ' [:(] No UPnP answered. Try again'
-  sys.exit(1)
+renderer = get_renderer_from_config(rconf)
+if renderer == '':
+  results = []
+  ssdp_lookup_main(results)
+  result = results[0]
+  cache_renderer(rconf, result)
+else:
+  result = renderer
 
-if sys.argv[1] == '-c':
-  print results
-  sys.exit(0)
+rhost, rport, rurl = get_renderer_control(result)
+addr = 'http://' + rhost + ':' + str(rport) + rurl
 
-for result in results:
-  data = urllib2.urlopen(result).read()
-  expr = re.compile(r'urn:upnp-org:serviceId:AVTransport.*<controlURL>(.*)</controlURL>', re.DOTALL)
-  regexresult = expr.findall(data)
-  o = urlparse.urlparse(result)
-  addr = 'http://' + o.hostname + ':' + str(o.port) + regexresult[0]
-  my_http_addr = get_router(o.hostname, o.port)
+if a1 == '-C':
+  renderer_cmd_multi(addr, 'Play', play_message, True)
+  print_finish(True)
+if a1 == '-P':
+  renderer_cmd_multi(addr, 'Pause', pause_message, True)
+  print_finish(True)
+if a1 == '-S':
+  renderer_cmd_multi(addr, 'Stop', stop_message, True)
+  print_finish(True)
 
-  payload = ''
-  if sys.argv[1] == '-f':
-    payload = 'http://' + my_http_addr + '/' + urllib2.quote(os.path.basename(sys.argv[2]))
-  if sys.argv[1] == '-u':
-    payload = sys.argv[2]
-  if sys.argv[1] == '-y':
-    command = [ytd, '-g', '--format', 'mp4', sys.argv[2]]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE)
-    out, err = process.communicate()
-    for url in out:
-      payload = out.strip()
-    if payload == '':
-      print ' [:(] youtube-dl could not provide us with url'
-      sys.exit(1)
-    print ' [:)] caught this url: %s' % payload
- 
+my_http_addr = get_router(rhost, rport)
+
+payload = ''
+if a1 == '-f':
+  payload = 'http://' + my_http_addr + '/' + urllib2.quote(os.path.basename(sys.argv[2]))
+if a1 == '-u':
+  payload = sys.argv[2]
+if a1 == '-y':
+  command = [ytd, '-g', '--format', 'mp4', sys.argv[2]]
+  process = subprocess.Popen(command, stdout=subprocess.PIPE)
+  out, err = process.communicate()
+  for url in out:
+    payload = out.strip()
   if payload == '':
-    return_help()
+    print ' [:(] youtube-dl could not provide us with url'
+    print_finish(False)
+  print ' [:)] caught this url: %s' % payload
 
-  message_template = xml_head + '<u:SetAVTransportURI ' + it + '<CurrentURI>' + payload + \
-  '</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
+if payload == '':
+  return_help()
 
-  try:
-    req = urllib2.Request(addr, data=stop_message, headers=get_headers('Stop', len(stop_message)))
-    urllib2.urlopen(req)
-  except:
-    print ' [:|] Warning: Failed to send STOP message'
-  try:
-    req = urllib2.Request(addr, data=message_template, headers=get_headers('SetAVTransportURI', len(message_template)))
-    urllib2.urlopen(req)
-  except:
-    print ' [:(] Critical: Failed to send config message'
-    sys.exit(1)
-  try:
-    req = urllib2.Request(addr, data=play_message, headers=get_headers('Play', len(play_message)))
-    urllib2.urlopen(req)
-  except:
-    print ' [:(] Critical: Failed to send PLAY message'
-    sys.exit(1)
+message_template = xml_head + '<u:SetAVTransportURI ' + it + '<CurrentURI>' + payload + msg_tail
 
-print ' [:)] Finished.'
+renderer_cmd_multi(addr, 'Stop', stop_message, False)
+renderer_cmd_multi(addr, 'SetAVTransportURI', message_template, True)
+renderer_cmd_multi(addr, 'Play', play_message, True)
+
+print_finish(True)
