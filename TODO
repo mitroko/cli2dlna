@@ -1,0 +1,6 @@
+Interactive mode.
+- interactive mode should give you an ability to
+  - choose remote renderer
+  - choose interface
+  - probably choose file/url
+  - probably curses menu of remote library
