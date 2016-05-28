@@ -176,6 +176,30 @@ def renderer_cmd_multi(addr, action, message, is_critical):
     if is_critical:
       print_finish(False)
 
+def get_yt_link(link, ltype):
+  payload = ''
+  command = [ytd, '-g', '--format', ltype, link]
+  process = subprocess.Popen(command, stdout=subprocess.PIPE)
+  out, err = process.communicate()
+  for url in out:
+    payload = out.strip()
+  if payload == '':
+    print ' [:(] youtube-dl could not provide us with url'
+    print_finish(False)
+  print ' [:)] caught this url: %s' % payload
+  return payload
+
+def long_url_wa(yt_link, my_http_addr, streamer_port, chunker):
+  xdata = urllib.urlencode(dict(xuri=yt_link))
+  xheaders = {'Content-type': 'application/x-www-form-urlencoded'}
+  xreq = urllib2.Request('http://try.lc/', xdata, xheaders)
+  xres = urllib2.urlopen(xreq)
+  slink = '/' + xres.info().getheaders("Reason")[0].split(' ')[2].split(':')[0]
+  payload = 'http://' + my_http_addr + ':' + str(streamer_port) + slink
+  subprocess.Popen(['nc', '-l', str(streamer_port), '-c', chunker],
+    close_fds=True, stdin=None, stdout=None, stderr=None, shell=False)
+  return payload
+
 def return_help():
   me = sys.argv[0]
   print ' [?] Examples, how to run:'
@@ -228,6 +252,7 @@ msg_tail = '</CurrentURI><CurrentURIMetaData>21BDbFXIWvF2.128.mp3</CurrentURIMet
 sth = '"urn:schemas-upnp-org:service:AVTransport'
 ytd = os.getenv('YOUTUBE_DL', '/usr/local/bin/youtube-dl')
 rconf = os.path.dirname(sys.argv[0]) + '/renderer.cache'
+streamer_port = 50505
 
 # :: greetings
 get_header()
@@ -283,6 +308,12 @@ if a1 == '-y':
     print ' [:(] youtube-dl could not provide us with url'
     print_finish(False)
   print ' [:)] caught this url: %s' % payload
+
+if a1 == '-x':
+  import urllib
+  payload = get_yt_link(sys.argv[2], 'mp4')
+  chunker = os.path.dirname(sys.argv[0]) + '/chunker.py'
+  payload = long_url_wa(payload, my_http_addr, streamer_port, chunker)
 
 if payload == '':
   return_help()
