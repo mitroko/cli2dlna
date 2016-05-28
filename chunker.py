@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-import os, sys, urllib2
+import os, socket, sys, urllib2
+
+# Default timeout 3H
+socket.setdefaulttimeout(10800)
 
 location = sys.stdin.readline().split(' ')
 url = str(location[1])
