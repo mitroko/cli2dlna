@@ -209,12 +209,17 @@ def return_help():
   print
   print ' ]$ ' + me + ' -u http://...'
   print '     Script will notify your UPnP renderer to get media from this url.'
-  print ' ]$ ' + me + ' -y ...'
+  print ' ]$ ' + me + ' [-yv|-ya] ...'
   print '     Script will call youtube-dl to process your request.'
   print '     [!] - YOUTUBE_DL environment variable should be set'
-  print '     [!]   or default of /usr/local/bin/youtube-dl will be used'
+  print '           or default of /usr/local/bin/youtube-dl will be used'
   print '     youtube-dl will be executed as subprocess with -g key to get http link.'
+  print '     If you need to play audio, specify -ya key, for video use -yv key'
   print '     Afterthat, this link will be sent to your UPnP renderer.'
+  print '     [!] - There is known bug with old renderers, that does not support long'
+  print '           urls. You may workaround with -xa key for audio, -xv for video.'
+  print '           External url shortner will be used. External script chunker.py will'
+  print '           be binded on ' + str(streamer_port) + 'port and processing media for renderer.'
   print
   print ' ]$ ' + me + ' -c'
   print '     Perform simple SSDP lookup for remote renderers'
@@ -298,18 +303,18 @@ if a1 == '-f':
   payload = 'http://' + my_http_addr + '/' + urllib2.quote(os.path.basename(sys.argv[2]))
 if a1 == '-u':
   payload = sys.argv[2]
-if a1 == '-y':
-  command = [ytd, '-g', '--format', 'mp4', sys.argv[2]]
-  process = subprocess.Popen(command, stdout=subprocess.PIPE)
-  out, err = process.communicate()
-  for url in out:
-    payload = out.strip()
-  if payload == '':
-    print ' [:(] youtube-dl could not provide us with url'
-    print_finish(False)
-  print ' [:)] caught this url: %s' % payload
 
-if a1 == '-x':
+if a1 == '-ya':
+  payload = get_yt_link(sys.argv[2], 'mp4')
+if a1 == '-yv':
+  payload = get_yt_link(sys.argv[2], 'mp3')
+
+if a1 == '-xa':
+  import urllib
+  payload = get_yt_link(sys.argv[2], 'mp3')
+  chunker = os.path.dirname(sys.argv[0]) + '/chunker.py'
+  payload = long_url_wa(payload, my_http_addr, streamer_port, chunker)
+if a1 == '-xv':
   import urllib
   payload = get_yt_link(sys.argv[2], 'mp4')
   chunker = os.path.dirname(sys.argv[0]) + '/chunker.py'
