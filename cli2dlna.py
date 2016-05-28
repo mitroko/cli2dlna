@@ -165,12 +165,16 @@ def renderer_cmd_multi(addr, action, message, is_critical):
     print ' [**] Sending ' + str(action) + ' message'
     req = urllib2.Request(addr, data=message, headers=get_headers(action, len(message)))
     urllib2.urlopen(req)
-  except:
+  except urllib2.HTTPError, e:
     if is_critical:
-      print ' [:(] Critical: Failed to send ' + str(action) + ' message'
-      print_finish(False)
+      pre = ' [:(] '
     else:
-      print ' [:|] Warning: Failed to send ' + str(action) + ' message'
+      pre = ' [:|] '
+    print pre + 'Got code: %s' % str(e.code)
+    print pre + 'Got reason: %s' % str(e.reason)
+    print pre + 'Failed to send ' + str(action) + ' message'
+    if is_critical:
+      print_finish(False)
 
 def return_help():
   me = sys.argv[0]
@@ -220,7 +224,7 @@ it = 'xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</Instan
 stop_message = xml_head + '<u:Stop ' + it + '</u:Stop></s:Body></s:Envelope>'
 play_message = xml_head + '<u:Play ' + it + '<Speed>1</Speed></u:Play></s:Body></s:Envelope>'
 pause_message = xml_head + '<u:Pause ' + it + '<Speed>1</Speed></u:Pause></s:Body></s:Envelope>'
-msg_tail = '</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
+msg_tail = '</CurrentURI><CurrentURIMetaData>21BDbFXIWvF2.128.mp3</CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
 sth = '"urn:schemas-upnp-org:service:AVTransport'
 ytd = os.getenv('YOUTUBE_DL', '/usr/local/bin/youtube-dl')
 rconf = os.path.dirname(sys.argv[0]) + '/renderer.cache'
