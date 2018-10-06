@@ -87,14 +87,14 @@ def get_headers(action, clength):
     'Content-Type': 'text/xml;charset=utf-8',
     'Content-Length': clength,
     'Connection': 'Keep-Alive',
-    'Soapaction': sth + ':1#' + action + '"'
+    'SOAPAction': sth + ':1#' + action + '"'
   }
 
 # SSDP discovery improved code
 def ssdp_discover(service, bind_ip, res):
   group = ('239.255.255.250', 1900)
   message = "\r\n".join(['M-SEARCH * HTTP/1.1', 'HOST: {0}:{1}', 'MAN: "ssdp:discover"', 'ST: {st}','MX: 3','',''])
-  socket.setdefaulttimeout(1)
+  socket.setdefaulttimeout(3)
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
   sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
@@ -152,13 +152,17 @@ def cache_renderer(rfile, result):
 def get_renderer_control(result):
   try:
     data = urllib2.urlopen(result).read()
-    expr = re.compile(r'urn:upnp-org:serviceId:AVTransport.*<controlURL>(.*)</controlURL>', re.DOTALL)
+    expr = re.compile(r'<serviceType>(.*?</controlURL>)', re.DOTALL)
     regexresult = expr.findall(data)
+    for rm in regexresult:
+      if 'urn:schemas-upnp-org:service:AVTransport' in rm:
+        expr1 = re.compile(r'<controlURL>(.*)</controlURL>', re.DOTALL)
+        control_url = expr1.findall(rm)[0]
     o = urlparse.urlparse(result)
   except:
     print ' [:(] Unable to get/parse renderer control. Unsupported device.'
     print_finish(False)
-  return str(o.hostname), o.port, str(regexresult[0])
+  return str(o.hostname), o.port, control_url
 
 def renderer_cmd_multi(addr, action, message, is_critical):
   try:
@@ -253,7 +257,7 @@ it = 'xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"><InstanceID>0</Instan
 stop_message = xml_head + '<u:Stop ' + it + '</u:Stop></s:Body></s:Envelope>'
 play_message = xml_head + '<u:Play ' + it + '<Speed>1</Speed></u:Play></s:Body></s:Envelope>'
 pause_message = xml_head + '<u:Pause ' + it + '<Speed>1</Speed></u:Pause></s:Body></s:Envelope>'
-msg_tail = '</CurrentURI><CurrentURIMetaData>21BDbFXIWvF2.128.mp3</CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
+msg_tail = '</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
 sth = '"urn:schemas-upnp-org:service:AVTransport'
 ytd = os.getenv('YOUTUBE_DL', '/usr/local/bin/youtube-dl')
 rconf = os.path.dirname(sys.argv[0]) + '/renderer.cache'
@@ -323,7 +327,7 @@ if a1 == '-xv':
 if payload == '':
   return_help()
 
-message_template = xml_head + '<u:SetAVTransportURI ' + it + '<CurrentURI>' + payload + msg_tail
+message_template = xml_head + '<u:SetAVTransportURI ' + it + '<CurrentURI><![CDATA[' + payload + ']]>' + msg_tail
 
 renderer_cmd_multi(addr, 'Stop', stop_message, False)
 renderer_cmd_multi(addr, 'SetAVTransportURI', message_template, True)

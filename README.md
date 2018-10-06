@@ -28,7 +28,7 @@ Script will notify your UPnP renderer to get media from this url.
 Script will call youtube-dl executable to process your request.  
 Therefore, you should have youtube-dl binary installed to use this option.  
 By default script assumes, that youtube-dl is located in /usr/local/bin.  
-You may change this behaviour by setting YOUTUBE_DL environment variable(ex: YOUTUBE_DL=/usr/bin/youtube-dl)  
+You may change this behavior by setting YOUTUBE_DL environment variable(ex: YOUTUBE_DL=/usr/bin/youtube-dl)  
 youtube-dl will be executed as subprocess with -g key to get http link.  
 Afterthat, this link will be sent to your UPnP renderer.  
 
@@ -47,7 +47,7 @@ Script will send Stop command to stop playing current media
     $ cli2dlna.py  -h
 Script will show you usage information  
 
-To avoid future SSDP lookups, script saves ad re-reads every time it's renderer.cache file.
+Script stores renderer address to renderer.cache file to avoid SSDP lookups.
 
 HINTS
 -----
