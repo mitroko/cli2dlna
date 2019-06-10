@@ -259,7 +259,7 @@ play_message = xml_head + '<u:Play ' + it + '<Speed>1</Speed></u:Play></s:Body><
 pause_message = xml_head + '<u:Pause ' + it + '<Speed>1</Speed></u:Pause></s:Body></s:Envelope>'
 msg_tail = '</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
 sth = '"urn:schemas-upnp-org:service:AVTransport'
-ytd = os.getenv('YOUTUBE_DL', '/usr/local/bin/youtube-dl')
+ytd = os.getenv('YOUTUBE_DL', '/usr/bin/youtube-dl')
 rconf = os.path.dirname(sys.argv[0]) + '/renderer.cache'
 streamer_port = 50505
 
