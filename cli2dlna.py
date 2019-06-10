@@ -309,9 +309,9 @@ if a1 == '-u':
   payload = sys.argv[2]
 
 if a1 == '-ya':
-  payload = get_yt_link(sys.argv[2], 'mp4')
-if a1 == '-yv':
   payload = get_yt_link(sys.argv[2], 'mp3')
+if a1 == '-yv':
+  payload = get_yt_link(sys.argv[2], 'mp4')
 
 if a1 == '-xa':
   import urllib
