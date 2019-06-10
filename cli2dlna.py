@@ -18,13 +18,16 @@
 
 import array                             # used during ip calculations
 import fcntl                             # used during ip calculations
+import json                              # used to generate request id for XBMC/JSON
 import httplib                           # used to get location from fake socket
 import os                                # used to get os environment
 import re                                # used to filterout upnp address from ssdp responce
+import select                            # used to read response from XBMC/JSON
 import socket                            # used to implement socket funcions
 import struct                            # used during ip calculations
 import sys                               # used to get argv
 import subprocess                        # used to call youtube-dl
+import time                              # used to generate request id for XBMC/JSON
 import urllib2                           # used to send xml packets
 import urlparse                          # used to split/parse ssdp responce into
 from StringIO import StringIO as fake_io # used for fake socket
@@ -180,6 +183,46 @@ def renderer_cmd_multi(addr, action, message, is_critical):
     if is_critical:
       print_finish(False)
 
+def renderer_vol_multi(addr, port, message):
+  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  s.connect((addr, port))
+  if message in ['increment', 'decrement']:
+    req = json.loads('{"jsonrpc": "2.0", "method": "Application.SetVolume"}')
+    req['params'] = { 'volume': message }
+  if message in ['mute', 'unmute']:
+    req = json.loads('{"jsonrpc": "2.0", "method": "Application.SetMute", "params": {"mute": "toggle"}}')
+  req['id'] = int(time.time())
+  req = json.dumps(req)
+  s.send(req)
+
+  rsp = ""
+  while True:
+    rsp += s.recv(0x4000)
+
+    if len(select.select([s], [], [], 0)[0]) == 0:
+        break;
+
+  s.shutdown(socket.SHUT_RDWR)
+  s.close()
+  rsp = json.loads(rsp)
+  try:
+    pre = ' [:)] '
+    if message in ['increment', 'decrement']:
+      if 'result' in rsp:
+        print pre + 'Volume level is set to: %s' % str(rsp['result'])
+      elif 'method' in rsp and rsp['method'] == 'Application.OnVolumeChanged':
+        print pre + 'Volume level is set to: %s' % str(rsp['params']['data']['volume'])
+    if message in ['mute', 'unmute']:
+      if 'method' in rsp and rsp['method'] == 'Application.OnVolumeChanged':
+        if bool(rsp['params']['data']['muted']):
+          print pre + 'Muted'
+        else:
+          print pre + 'Unmuted'
+  except:
+    pre = ' [:|] '
+    print pre + 'Volume status could not be parsed'
+  return
+
 def get_yt_link(link, ltype):
   payload = ''
   command = [ytd, '-g', '--format', ltype, link]
@@ -237,6 +280,18 @@ def return_help():
   print ' ]$ ' + me + ' -S'
   print '     stop current media'
   print
+  print ' ]$ ' + me + ' -Vi'
+  print '     increment xbmc player volume (Up)'
+  print
+  print ' ]$ ' + me + ' -Vd'
+  print '     decrement xbmc player volume (Down)'
+  print
+  print ' ]$ ' + me + ' -Vm'
+  print '     mute xbmc player volume'
+  print
+  print ' ]$ ' + me + ' -Vu'
+  print '     unmute xbmc player volume'
+  print
   print ' ]$ ' + me + ' -h'
   print '     Print this message :)'
   print
@@ -262,6 +317,7 @@ sth = '"urn:schemas-upnp-org:service:AVTransport'
 ytd = os.getenv('YOUTUBE_DL', '/usr/bin/youtube-dl')
 rconf = os.path.dirname(sys.argv[0]) + '/renderer.cache'
 streamer_port = 50505
+xbmc_port = 9090
 
 # :: greetings
 get_header()
@@ -298,6 +354,18 @@ if a1 == '-P':
   print_finish(True)
 if a1 == '-S':
   renderer_cmd_multi(addr, 'Stop', stop_message, True)
+  print_finish(True)
+if a1 == '-Vi':
+  renderer_vol_multi(rhost, xbmc_port, 'increment')
+  print_finish(True)
+if a1 == '-Vd':
+  renderer_vol_multi(rhost, xbmc_port, 'decrement')
+  print_finish(True)
+if a1 == '-Vm':
+  renderer_vol_multi(rhost, xbmc_port, 'mute')
+  print_finish(True)
+if a1 == '-Vu':
+  renderer_vol_multi(rhost, xbmc_port, 'unmute')
   print_finish(True)
 
 my_http_addr = get_router(rhost, rport)
