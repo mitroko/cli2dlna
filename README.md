@@ -44,6 +44,18 @@ Script will send Pause command to pause playing current media
     $ cli2dlna.py  -S
 Script will send Stop command to stop playing current media  
 
+    $ cli2dlna.py  -Vi
+Script will send increase volume command to xbmc
+
+    $ cli2dlna.py  -Vd
+Script will send decrease volume command to xbmc
+
+    $ cli2dlna.py  -Vm
+Script will send mute volume command to xbmc
+
+    $ cli2dlna.py  -Vu
+Script will send unmute volume command to xbmc
+
     $ cli2dlna.py  -h
 Script will show you usage information  
 
