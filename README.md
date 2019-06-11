@@ -41,22 +41,25 @@ Script will send Play command to continue playing current media
     $ cli2dlna.py -P
 Script will send Pause command to pause playing current media  
 
-    $ cli2dlna.py  -S
+    $ cli2dlna.py -S
 Script will send Stop command to stop playing current media  
 
-    $ cli2dlna.py  -Vi
+    $ cli2dlna.py -V80
+Script will send "set volume level to 80%" command to xbmc
+
+    $ cli2dlna.py -Vi
 Script will send increase volume command to xbmc
 
-    $ cli2dlna.py  -Vd
+    $ cli2dlna.py -Vd
 Script will send decrease volume command to xbmc
 
-    $ cli2dlna.py  -Vm
+    $ cli2dlna.py -Vm
 Script will send mute volume command to xbmc
 
-    $ cli2dlna.py  -Vu
+    $ cli2dlna.py -Vu
 Script will send unmute volume command to xbmc
 
-    $ cli2dlna.py  -h
+    $ cli2dlna.py -h
 Script will show you usage information  
 
 Script stores renderer address to renderer.cache file to avoid SSDP lookups.

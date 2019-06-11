@@ -189,6 +189,9 @@ def renderer_vol_multi(addr, port, message):
   if message in ['increment', 'decrement']:
     req = json.loads('{"jsonrpc": "2.0", "method": "Application.SetVolume"}')
     req['params'] = { 'volume': message }
+  if re.match('\d+', message):
+    req = json.loads('{"jsonrpc": "2.0", "method": "Application.SetVolume"}')
+    req['params'] = { 'volume': int(message) }
   if message in ['mute', 'unmute']:
     req = json.loads('{"jsonrpc": "2.0", "method": "Application.SetMute", "params": {"mute": "toggle"}}')
   req['id'] = int(time.time())
@@ -280,6 +283,9 @@ def return_help():
   print ' ]$ ' + me + ' -S'
   print '     stop current media'
   print
+  print ' ]$ ' + me + ' -V80'
+  print '     set volume level to 80%'
+  print
   print ' ]$ ' + me + ' -Vi'
   print '     increment xbmc player volume (Up)'
   print
@@ -355,6 +361,9 @@ if a1 == '-P':
 if a1 == '-S':
   renderer_cmd_multi(addr, 'Stop', stop_message, True)
   print_finish(True)
+if re.match('\-V\d+', a1):
+  renderer_vol_multi(rhost, xbmc_port, a1[2:])
+  print_finish(True)
 if a1 == '-Vi':
   renderer_vol_multi(rhost, xbmc_port, 'increment')
   print_finish(True)
@@ -377,13 +386,13 @@ if a1 == '-u':
   payload = sys.argv[2]
 
 if a1 == '-ya':
-  payload = get_yt_link(sys.argv[2], 'mp3')
+  payload = get_yt_link(sys.argv[2], 'm4a')
 if a1 == '-yv':
   payload = get_yt_link(sys.argv[2], 'mp4')
 
 if a1 == '-xa':
   import urllib
-  payload = get_yt_link(sys.argv[2], 'mp3')
+  payload = get_yt_link(sys.argv[2], 'm4a')
   chunker = os.path.dirname(sys.argv[0]) + '/chunker.py'
   payload = long_url_wa(payload, my_http_addr, streamer_port, chunker)
 if a1 == '-xv':
