@@ -14,6 +14,11 @@ Right now:
 
 However it works!
 
+Docker build
+------------
+    $ docker build -t mitroko/cli2dlna:latest --network host .
+
+
 Examples:
 ---------
     $ cli2dlna.py -f /path/to/media/file.mp4
