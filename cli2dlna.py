@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 #
 #    Description : Command line tool to play media on remote renderers.
 #    Author      : Dmitriy Stremkovskiy <mitroko@gmail.com>.
@@ -228,7 +228,7 @@ def renderer_vol_multi(addr, port, message):
 
 def get_yt_link(link, ltype):
   payload = ''
-  command = [ytd, '-g', '--format', ltype, link]
+  command = [ytd, '--no-cache-dir', '-g', '--format', ltype, link]
   process = subprocess.Popen(command, stdout=subprocess.PIPE)
   out, err = process.communicate()
   for url in out:
@@ -320,7 +320,7 @@ play_message = xml_head + '<u:Play ' + it + '<Speed>1</Speed></u:Play></s:Body><
 pause_message = xml_head + '<u:Pause ' + it + '<Speed>1</Speed></u:Pause></s:Body></s:Envelope>'
 msg_tail = '</CurrentURI><CurrentURIMetaData></CurrentURIMetaData></u:SetAVTransportURI></s:Body></s:Envelope>'
 sth = '"urn:schemas-upnp-org:service:AVTransport'
-ytd = os.getenv('YOUTUBE_DL', '/usr/bin/youtube-dl')
+ytd = os.getenv('YOUTUBE_DL', '/usr/local/bin/youtube-dl')
 rconf = os.path.dirname(sys.argv[0]) + '/renderer.cache'
 streamer_port = 50505
 xbmc_port = 9090
