@@ -18,6 +18,9 @@ Docker build
 ------------
     $ docker build -t mitroko/cli2dlna:latest --network host .
 
+Alias for docker image use
+--------------------------
+    $ alias cli2dlna.py='docker run --rm --name cli2dlna -v /etc/renderer.cache:/renderer.cache -ti mitroko/cli2dlna'
 
 Examples:
 ---------
