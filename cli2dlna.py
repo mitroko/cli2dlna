@@ -274,7 +274,7 @@ def return_help():
   print '     [!] - There is known bug with old renderers, that does not support long'
   print '           urls. You may workaround with -xa key for audio, -xv for video.'
   print '           External url shortner will be used. External script chunker.py will'
-  print '           be binded on ' + str(streamer_port) + 'port and processing media for renderer.'
+  print '           be binded on ' + str(streamer_port) + ' port and processing media for renderer.'
   print
   print ' ]$ ' + me + ' -c'
   print '     Perform simple SSDP lookup for remote renderers'
