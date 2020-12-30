@@ -200,13 +200,18 @@ def renderer_vol_multi(addr, port, message):
 
   rsp = ""
   while True:
-    rsp += s.recv(0x4000)
+    try:
+      rsp += s.recv(0x4000)
+    except:
+      pass
 
     if len(select.select([s], [], [], 0)[0]) == 0:
         break;
 
   s.shutdown(socket.SHUT_RDWR)
   s.close()
+  if '}{' in rsp:
+    rsp = rsp[rsp.find('}{')+1:]
   rsp = json.loads(rsp)
   try:
     pre = ' [:)] '
