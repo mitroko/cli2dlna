@@ -200,10 +200,7 @@ def renderer_vol_multi(addr, port, message):
 
   rsp = ""
   while True:
-    try:
-      rsp += s.recv(0x4000)
-    except:
-      pass
+    rsp += s.recv(0x4000)
 
     if len(select.select([s], [], [], 0)[0]) == 0:
         break;
@@ -211,7 +208,7 @@ def renderer_vol_multi(addr, port, message):
   s.shutdown(socket.SHUT_RDWR)
   s.close()
   if '}{' in rsp:
-    rsp = rsp[rsp.find('}{')+1:]
+    rsp = '{' + rsp.split('}{')[1]
   rsp = json.loads(rsp)
   try:
     pre = ' [:)] '
@@ -274,7 +271,7 @@ def return_help():
   print '     [!] - There is known bug with old renderers, that does not support long'
   print '           urls. You may workaround with -xa key for audio, -xv for video.'
   print '           External url shortner will be used. External script chunker.py will'
-  print '           be binded on ' + str(streamer_port) + ' port and processing media for renderer.'
+  print '           be binded on ' + str(streamer_port) + 'port and processing media for renderer.'
   print
   print ' ]$ ' + me + ' -c'
   print '     Perform simple SSDP lookup for remote renderers'
